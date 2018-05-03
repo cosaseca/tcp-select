@@ -3,7 +3,7 @@ unit UnitTcpServer;
 interface
 
 uses
-  Classes {$IFDEF MSWINDOWS} , Windows {$ENDIF}, WinSock, SysUtils;
+  Classes {$IFDEF MSWINDOWS} , Windows {$ENDIF}, WinSock, SysUtils, PerlRegEx, UnitLogger;
 
 type
   TcpServer = class(TThread)
@@ -15,6 +15,7 @@ type
 
 var
   Thread: TcpServer;
+  SN: String;
 
 implementation
 
@@ -46,6 +47,7 @@ procedure TcpServer.SetName;
 {$IFDEF MSWINDOWS}
 var
   ThreadNameInfo: TThreadNameInfo;
+  
 {$ENDIF}
 begin
 {$IFDEF MSWINDOWS}
@@ -72,6 +74,10 @@ var
   Ret, Len, I, J:Integer;
   ClientScok:TSocket;
   Buffer:array[1..1024] of AnsiChar;
+  RegExHead:TPerlRegEx;
+  Cmd: String;
+  Data: String;
+  P: Pointer;
 begin
   SetName;
   { Place thread code here }
@@ -84,6 +90,8 @@ begin
   listen(Sock, 5);
   FD_ZERO(FdSetR);
   FD_SET(Sock, FdSetR);
+  RegExHead := TPerlRegEx.Create;
+  RegExHead.RegEx := 'AT\+B (\w+) *(.*)\r\n';
   while (not Terminated) do
   begin
     ReadFds := FdSetR;
@@ -103,7 +111,7 @@ begin
               Continue;
             end;  
             ClientScok := accept(Sock, @addr, @len);
-            OutputDebugString('accept');
+            Logger.info('accept');
             if ClientScok <> INVALID_SOCKET then
             begin
               FD_SET(ClientScok, FdSetR);
@@ -116,16 +124,32 @@ begin
             begin
               closesocket(ReadFds.fd_array[I]);
               FD_CLR(ReadFds.fd_array[I], FdSetR);
-              OutputDebugString('close');
+              Logger.info('close');
             end
             else
             begin
-              OutputDebugString('recv');
+              Logger.info('recv');
+              RegExHead.Subject := Buffer;
+              if RegExHead.Match then
+              begin
+                Cmd := RegExHead.Groups[1];
+                Data := RegExHead.Groups[2];
+                Logger.info(Format('CMD: %s, DATA: %s', [Cmd, Data]));
+                if 'SN' = Cmd then
+                begin
+                  SN := Data;
+                end;  
+              end;
               for J:=0 to FdSetR.fd_count-1 do
               begin
                 if FdSetR.fd_array[J] <> Sock then
                 begin
-                  send(FdSetR.fd_array[J], Buffer, Ret, 0);
+                  if Length(SN) > 0 then
+                  begin
+                    P := @SN;
+                    Logger.info(Format('SN: %s %d', [SN, Length(SN)]));
+                    send(FdSetR.fd_array[J], P, Length(SN), 0);
+                  end;
                 end;
               end;
             end;    
@@ -138,6 +162,7 @@ begin
       OutputDebugString('timeout');
     end;  
   end;
+  RegExHead.Free;
   shutdown(Sock, SD_BOTH);
   closesocket(Sock);
   WSACleanup();

@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient,
-  Sockets, WinSock, UnitTcpServer;
+  Sockets, WinSock, UnitTcpServer, UnitLogger;
 
 type
   TForm1 = class(TForm)
@@ -25,7 +25,9 @@ implementation
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-
+  UnitLogger.Logger := UnitLogger.TLogger.Create(Application.ExeName + '.log.txt', LOG_MAX_LEVEL);
+  Logger.info(Format('Application: %s %d', [Application.Exename, GetCurrentProcessId]));
+  Logger.info(Format('Version: %s', ['1.0.1@2018.03.08']));
   UnitTcpServer.Thread := UnitTcpServer.TcpServer.Create(True);
   UnitTcpServer.Thread.Resume;
 end;
