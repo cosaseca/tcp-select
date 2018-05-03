@@ -74,10 +74,11 @@ var
   Ret, Len, I, J:Integer;
   ClientScok:TSocket;
   Buffer:array[1..1024] of AnsiChar;
+  SendBuffer:array[1..1024] of AnsiChar;
   RegExHead:TPerlRegEx;
   Cmd: String;
   Data: String;
-  P: Pointer;
+  StrTmp: String;
 begin
   SetName;
   { Place thread code here }
@@ -137,20 +138,23 @@ begin
                 Logger.info(Format('CMD: %s, DATA: %s', [Cmd, Data]));
                 if 'SN' = Cmd then
                 begin
-                  SN := Data;
-                end;  
-              end;
-              for J:=0 to FdSetR.fd_count-1 do
-              begin
-                if FdSetR.fd_array[J] <> Sock then
-                begin
-                  if Length(SN) > 0 then
+                  if Length(Data) > 0 then
                   begin
-                    P := @SN;
-                    Logger.info(Format('SN: %s %d', [SN, Length(SN)]));
-                    send(FdSetR.fd_array[J], P, Length(SN), 0);
+                    SN := Data;
                   end;
-                end;
+                  for J:=0 to FdSetR.fd_count-1 do
+                  begin
+                    if FdSetR.fd_array[J] <> Sock then
+                    begin
+                      if Length(SN) > 0 then
+                      begin
+                        StrTmp := Format('AT-B %s%s', [SN, #13#10]);
+                        CopyMemory(@SendBuffer[1], PChar(StrTmp), Length(StrTmp));
+                        send(FdSetR.fd_array[J], SendBuffer, Length(StrTmp), 0);
+                      end;
+                    end;
+                  end;
+                end;  
               end;
             end;    
           end;  
