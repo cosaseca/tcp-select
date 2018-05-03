@@ -5,14 +5,13 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient,
-  Sockets, WinSock, UnitATModule;
+  Sockets, WinSock, UnitTcpServer;
 
 type
   TForm1 = class(TForm)
     procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
-    ATServer: ATModule;
   public
     { Public declarations }
   end;
@@ -26,8 +25,9 @@ implementation
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  ATServer := ATModule.Create(True);
-  ATServer.Resume;
+
+  UnitTcpServer.Thread := UnitTcpServer.TcpServer.Create(True);
+  UnitTcpServer.Thread.Resume;
 end;
 
 end.

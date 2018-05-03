@@ -1,4 +1,4 @@
-unit UnitATModule;
+unit UnitTcpServer;
 
 interface
 
@@ -6,12 +6,15 @@ uses
   Classes {$IFDEF MSWINDOWS} , Windows {$ENDIF}, WinSock, SysUtils;
 
 type
-  ATModule = class(TThread)
+  TcpServer = class(TThread)
   private
     procedure SetName;
   protected
     procedure Execute; override;
   end;
+
+var
+  Thread: TcpServer;
 
 implementation
 
@@ -22,7 +25,7 @@ implementation
 
   and UpdateCaption could look like,
 
-    procedure ATModule.UpdateCaption;
+    procedure TcpServer.UpdateCaption;
     begin
       Form1.Caption := 'Updated in a thread';
     end; }
@@ -37,9 +40,9 @@ type
   end;
 {$ENDIF}
 
-{ ATModule }
+{ TcpServer }
 
-procedure ATModule.SetName;
+procedure TcpServer.SetName;
 {$IFDEF MSWINDOWS}
 var
   ThreadNameInfo: TThreadNameInfo;
@@ -47,7 +50,7 @@ var
 begin
 {$IFDEF MSWINDOWS}
   ThreadNameInfo.FType := $1000;
-  ThreadNameInfo.FName := 'ATModule';
+  ThreadNameInfo.FName := 'TcpServer';
   ThreadNameInfo.FThreadID := $FFFFFFFF;
   ThreadNameInfo.FFlags := 0;
 
@@ -58,7 +61,7 @@ begin
 {$ENDIF}
 end;
 
-procedure ATModule.Execute;
+procedure TcpServer.Execute;
 var
   Sock:TSocket;
   WSData:WSAData;

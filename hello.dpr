@@ -3,7 +3,7 @@ program hello;
 uses
   Forms,
   UnitMain in 'UnitMain.pas' {Form1},
-  UnitATModule in 'UnitATModule.pas';
+  UnitTcpServer in 'UnitTcpServer.pas';
 
 {$R *.res}
 
