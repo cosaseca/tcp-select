@@ -8,7 +8,10 @@ uses
 type
   TcpServer = class(TThread)
   private
+    FdSetR:TFDSet;
+    Sock:TSocket;
     procedure SetName;
+    function ProcessHandler(Cmd: String; Data: String):Integer;
   protected
     procedure Execute; override;
   end;
@@ -65,20 +68,16 @@ end;
 
 procedure TcpServer.Execute;
 var
-  Sock:TSocket;
   WSData:WSAData;
   Timeout:TTimeVal;
-  FdSetR:TFDSet;
   ReadFds:TFDSet;
   Addr:TSockAddrIn;
-  Ret, Len, I, J:Integer;
+  Ret, Len, I:Integer;
   ClientScok:TSocket;
   Buffer:array[1..1024] of AnsiChar;
-  SendBuffer:array[1..1024] of AnsiChar;
   RegExHead:TPerlRegEx;
   Cmd: String;
   Data: String;
-  StrTmp: String;
 begin
   SetName;
   { Place thread code here }
@@ -129,47 +128,56 @@ begin
             end
             else
             begin
-              Logger.info('recv');
               RegExHead.Subject := Buffer;
               if RegExHead.Match then
               begin
                 Cmd := RegExHead.Groups[1];
                 Data := RegExHead.Groups[2];
                 Logger.info(Format('CMD: %s, DATA: %s', [Cmd, Data]));
-                if 'SN' = Cmd then
-                begin
-                  if Length(Data) > 0 then
-                  begin
-                    SN := Data;
-                  end;
-                  for J:=0 to FdSetR.fd_count-1 do
-                  begin
-                    if FdSetR.fd_array[J] <> Sock then
-                    begin
-                      if Length(SN) > 0 then
-                      begin
-                        StrTmp := Format('AT-B %s%s', [SN, #13#10]);
-                        CopyMemory(@SendBuffer[1], PChar(StrTmp), Length(StrTmp));
-                        send(FdSetR.fd_array[J], SendBuffer, Length(StrTmp), 0);
-                      end;
-                    end;
-                  end;
-                end;  
-              end;
+                ProcessHandler(Cmd, Data);
+              end
+              else
+              begin
+                Logger.info(Format('%s', [PChar(@Buffer[1])]));
+              end;  
             end;    
           end;  
         end;
       end;
-    end
-    else
-    begin
-      OutputDebugString('timeout');
     end;  
   end;
   RegExHead.Free;
   shutdown(Sock, SD_BOTH);
   closesocket(Sock);
   WSACleanup();
+end;
+
+function TcpServer.ProcessHandler(Cmd: String; Data: String):Integer;
+var
+  J:Integer;
+  StrTmp: String;
+  Buffer:array[1..1024] of AnsiChar;
+begin
+  Result := 0;
+  if 'SN' = Cmd then
+  begin
+    if Length(Data) > 0 then
+    begin
+      SN := Data;
+    end;
+    for J:=0 to FdSetR.fd_count-1 do
+    begin
+      if FdSetR.fd_array[J] <> Sock then
+      begin
+        if Length(SN) > 0 then
+        begin
+          StrTmp := Format('AT-B %s%s', [SN, #13#10]);
+          CopyMemory(@Buffer[1], PChar(StrTmp), Length(StrTmp));
+          send(FdSetR.fd_array[J], Buffer, Length(StrTmp), 0);
+        end;
+      end;
+    end;
+  end;
 end;
 
 end.
