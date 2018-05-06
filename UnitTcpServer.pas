@@ -14,11 +14,14 @@ type
     function ProcessHandler(Cmd: String; Data: String):Integer;
   protected
     procedure Execute; override;
+  public
+    constructor Create(CreateSuspended: Boolean);
   end;
 
 var
   Thread: TcpServer;
   SN: String;
+  timeplus: Integer;
 
 implementation
 
@@ -66,6 +69,13 @@ begin
 {$ENDIF}
 end;
 
+constructor TcpServer.Create(CreateSuspended: Boolean);
+begin
+  inherited Create(CreateSuspended);
+  SN := '';
+  timeplus := 0;
+end;  
+
 procedure TcpServer.Execute;
 var
   WSData:WSAData;
@@ -78,6 +88,7 @@ var
   RegExHead:TPerlRegEx;
   Cmd: String;
   Data: String;
+  CmdNum: Integer;
 begin
   SetName;
   { Place thread code here }
@@ -129,18 +140,20 @@ begin
             else
             begin
               RegExHead.Subject := Buffer;
-              if RegExHead.Match then
+              CmdNum := 0;
+              while RegExHead.MatchAgain do
               begin
                 Cmd := RegExHead.Groups[1];
                 Data := RegExHead.Groups[2];
                 Logger.info(Format('CMD: %s, DATA: %s', [Cmd, Data]));
                 ProcessHandler(Cmd, Data);
-              end
-              else
+                Inc(CmdNum);
+              end;
+              if CmdNum <= 0 then
               begin
                 Logger.info(Format('%s', [PChar(@Buffer[1])]));
-              end;  
-            end;    
+              end;
+            end;
           end;  
         end;
       end;
@@ -175,6 +188,22 @@ begin
           CopyMemory(@Buffer[1], PChar(StrTmp), Length(StrTmp));
           send(FdSetR.fd_array[J], Buffer, Length(StrTmp), 0);
         end;
+      end;
+    end;
+  end
+  else if 'TIME' = Cmd then
+  begin
+    if Length(Data) > 0 then
+    begin
+      timeplus := StrToInt(Data);
+    end;
+    for J:=0 to FdSetR.fd_count-1 do
+    begin
+      if FdSetR.fd_array[J] <> Sock then
+      begin
+        StrTmp := Format('AT-B %d%s', [timeplus, #13#10]);
+        CopyMemory(@Buffer[1], PChar(StrTmp), Length(StrTmp));
+        send(FdSetR.fd_array[J], Buffer, Length(StrTmp), 0);
       end;
     end;
   end;
