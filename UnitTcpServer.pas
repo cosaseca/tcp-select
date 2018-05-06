@@ -22,6 +22,7 @@ var
   Thread: TcpServer;
   SN: String;
   timeplus: Integer;
+  Mac: String;
 
 implementation
 
@@ -74,6 +75,7 @@ begin
   inherited Create(CreateSuspended);
   SN := '';
   timeplus := 0;
+  Mac := '';
 end;  
 
 procedure TcpServer.Execute;
@@ -178,13 +180,13 @@ begin
     begin
       SN := Data;
     end;
-    for J:=0 to FdSetR.fd_count-1 do
+    // if Length(SN) > 0 then
     begin
-      if FdSetR.fd_array[J] <> Sock then
+      for J:=0 to FdSetR.fd_count-1 do
       begin
-        if Length(SN) > 0 then
+        if FdSetR.fd_array[J] <> Sock then
         begin
-          StrTmp := Format('AT-B %s%s', [SN, #13#10]);
+          StrTmp := Format('AT-B %s %s%s', [Cmd, SN, #13#10]);
           CopyMemory(@Buffer[1], PChar(StrTmp), Length(StrTmp));
           send(FdSetR.fd_array[J], Buffer, Length(StrTmp), 0);
         end;
@@ -201,9 +203,28 @@ begin
     begin
       if FdSetR.fd_array[J] <> Sock then
       begin
-        StrTmp := Format('AT-B %d%s', [timeplus, #13#10]);
+        StrTmp := Format('AT-B %s %d%s', [Cmd, timeplus, #13#10]);
         CopyMemory(@Buffer[1], PChar(StrTmp), Length(StrTmp));
         send(FdSetR.fd_array[J], Buffer, Length(StrTmp), 0);
+      end;
+    end;
+  end
+  else if 'MAC' = Cmd then
+  begin
+    if Length(Data) > 0 then
+    begin
+      Mac := Data;
+    end;
+    // if Length(Mac) > 0 then
+    begin
+      for J:=0 to FdSetR.fd_count-1 do
+      begin
+        if FdSetR.fd_array[J] <> Sock then
+        begin
+          StrTmp := Format('AT-B %s %s%s', [Cmd, Mac, #13#10]);
+          CopyMemory(@Buffer[1], PChar(StrTmp), Length(StrTmp));
+          send(FdSetR.fd_array[J], Buffer, Length(StrTmp), 0);
+        end;
       end;
     end;
   end;
